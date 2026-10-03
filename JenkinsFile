@@ -1,0 +1,35 @@
+pipeline {
+    agent any
+
+    options {
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+        timeout(time: 15, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                sh 'git log -1 --oneline'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'docker build -t app-lab:ci-$BUILD_NUMBER .'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh '''
+                    docker run --rm --entrypoint python \
+                      app-lab:ci-$BUILD_NUMBER \
+                      -c 'from app import app; response = app.test_client().get("/live"); assert response.status_code == 200, response.status_code; assert response.json["status"] == "alive", response.json; print("PASS: /live")'
+                '''
+            }
+        }
+    }
+}
