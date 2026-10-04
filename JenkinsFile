@@ -30,6 +30,34 @@ pipeline {
                       -c 'from app import app; response = app.test_client().get("/live"); assert response.status_code == 200, response.status_code; assert response.json["status"] == "alive", response.json; print("PASS: /live")'
                 '''
             }
+	}
+        stage('Publish') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'ghcr-app-lab',
+                        usernameVariable: 'GHCR_USER',
+                        passwordVariable: 'GHCR_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set +x
+                        export DOCKER_CONFIG="$(mktemp -d)"
+                        trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+
+                        printf '%s' "$GHCR_TOKEN" |
+                          docker login ghcr.io \
+                            -u "$GHCR_USER" --password-stdin
+
+                        docker tag app-lab:ci-$BUILD_NUMBER \
+                          ghcr.io/karzdy760/app-lab:ci-$BUILD_NUMBER
+
+                        docker push \
+                          ghcr.io/karzdy760/app-lab:ci-$BUILD_NUMBER
+                    '''
+                }
+            }
         }
     }
 }
+
