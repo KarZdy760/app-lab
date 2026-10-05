@@ -62,6 +62,33 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy') {
+    steps {
+        withCredentials([
+            sshUserPrivateKey(
+                credentialsId: 'lab01-deploy',
+                keyFileVariable: 'SSH_KEY',
+                usernameVariable: 'SSH_USER'
+            )
+        ]) {
+            sh '''
+                set +x
+
+                ssh \
+                  -i "$SSH_KEY" \
+                  -o IdentitiesOnly=yes \
+                  -o BatchMode=yes \
+                  -o StrictHostKeyChecking=yes \
+                  -o UserKnownHostsFile=/etc/jenkins/ssh_known_hosts \
+                  -o ConnectTimeout=10 \
+                  "$SSH_USER@192.168.195.140" \
+                  "sudo -n /usr/local/sbin/deploy-app-lab ci-$BUILD_NUMBER"
+            '''
+        }
+    }
+}
+
     }
 }
 
