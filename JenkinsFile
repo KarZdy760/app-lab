@@ -7,6 +7,10 @@ pipeline {
         timeout(time: 15, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
+    
+    triggers {
+	pollSCM('* * * * *')
+    }
 
     stages {
         stage('Checkout') {
